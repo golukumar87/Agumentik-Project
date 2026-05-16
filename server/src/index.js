@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
 import { connectDB } from "./lib/db.js";
 import authRoutes from "./routes/auth.routes.js";
 import insightRoutes from "./routes/insight.routes.js";
@@ -19,6 +21,9 @@ const clientUrls = (process.env.CLIENT_URL || "http://localhost:5173")
   .filter(Boolean);
 const allowedOrigins = [...new Set([...clientUrls, "http://localhost:5173", "http://localhost:5174"])];
 const server = http.createServer(app);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const clientDistPath = path.join(__dirname, "../../client/dist");
 
 app.use(
   cors({
@@ -35,6 +40,14 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/insights", insightRoutes);
+app.use(express.static(clientDistPath));
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
+
+  return res.sendFile(path.join(clientDistPath, "index.html"));
+});
 app.use(notFound);
 app.use(errorHandler);
 
